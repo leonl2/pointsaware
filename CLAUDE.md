@@ -12,9 +12,22 @@ npm run build        # Production build
 npm run lint         # ESLint (flat config)
 npx drizzle-kit push # Push schema changes to Neon Postgres
 npx drizzle-kit generate  # Generate migration files
+vercel --prod        # Deploy to production
 ```
 
 No test framework is configured yet.
+
+## Deployment
+
+- **Platform:** Vercel
+- **Production URL:** https://pointsaware.vercel.app
+- **Vercel project:** `derek-xus-projects-126e1192/pointsaware`
+- **Build region:** Washington, D.C. (iad1)
+- **Deploy command:** `vercel --prod` (uses Vercel CLI, currently v50.25.4)
+- **Cron jobs** (defined in `vercel.json`):
+  - `/api/cron/check-prices` — daily at 9:00 UTC
+  - `/api/cron/send-alerts` — daily at 10:00 UTC
+  - `/api/cron/cleanup` — daily at 3:00 UTC
 
 ## Architecture
 
