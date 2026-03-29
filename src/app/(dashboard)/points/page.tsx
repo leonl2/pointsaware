@@ -1,46 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Pencil, Check, X } from "lucide-react";
+import { CreditCard, Pencil, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PointsProgram {
-  id: string;
   program: string;
   name: string;
   balance: number;
-  lastSynced: string | null;
+  lastSyncedAt: string | null;
   cardGradient: string;
   chipColor: string;
   logo: string;
   accentColor: string;
 }
 
-const INITIAL_PROGRAMS: PointsProgram[] = [
-  {
-    id: "1",
+const PROGRAM_CONFIGS: Record<string, Omit<PointsProgram, "balance" | "lastSyncedAt">> = {
+  chase_ur: {
     program: "chase_ur",
     name: "Chase Ultimate Rewards",
-    balance: 0,
-    lastSynced: null,
     cardGradient: "from-[#0a1628] via-[#122040] to-[#1a3060]",
     chipColor: "bg-pj-gold/80",
     logo: "CHASE",
     accentColor: "text-pj-silver-bright",
   },
-  {
-    id: "2",
+  amex_mr: {
     program: "amex_mr",
     name: "Amex Membership Rewards",
-    balance: 0,
-    lastSynced: null,
     cardGradient: "from-[#0d1a2e] via-[#142844] to-[#1a3560]",
     chipColor: "bg-pj-gold/80",
     logo: "AMEX",
     accentColor: "text-pj-cyan",
   },
-];
+};
 
 const CHASE_PARTNERS = [
   "United MileagePlus", "British Airways Avios", "Air France/KLM Flying Blue",
@@ -61,10 +54,12 @@ function formatPoints(points: number): string {
 
 function PointsCard({
   program,
+  saving,
   onUpdateBalance,
 }: {
   program: PointsProgram;
-  onUpdateBalance: (id: string, balance: number) => void;
+  saving: boolean;
+  onUpdateBalance: (program: string, balance: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(program.balance.toString());
@@ -72,7 +67,7 @@ function PointsCard({
   const handleSave = () => {
     const val = parseInt(editValue.replace(/,/g, ""), 10);
     if (!isNaN(val) && val >= 0) {
-      onUpdateBalance(program.id, val);
+      onUpdateBalance(program.program, val);
     }
     setEditing(false);
   };
@@ -85,12 +80,9 @@ function PointsCard({
       )}
       style={{ minHeight: 220 }}
     >
-      {/* Card chip */}
       <div className={cn("absolute top-6 right-6 w-10 h-7 rounded-md", program.chipColor)} />
-      {/* Decorative circles */}
       <div className="absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-white/[0.02]" />
       <div className="absolute -bottom-5 -right-5 w-24 h-24 rounded-full bg-white/[0.02]" />
-      {/* Subtle border glow */}
       <div className="absolute inset-0 rounded-2xl border border-white/[0.05]" />
 
       <div className="relative z-10">
@@ -142,16 +134,21 @@ function PointsCard({
                   setEditValue(program.balance.toString());
                   setEditing(true);
                 }}
+                disabled={saving}
               >
-                <Pencil className="h-3 w-3" />
+                {saving ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Pencil className="h-3 w-3" />
+                )}
               </button>
             </div>
           )}
         </div>
 
         <p className="mt-6 text-[10px] text-pj-silver/40">
-          {program.lastSynced
-            ? `Last updated: ${program.lastSynced}`
+          {program.lastSyncedAt
+            ? `Last updated: ${new Date(program.lastSyncedAt).toLocaleDateString()}`
             : "Click pencil to enter balance"}
         </p>
       </div>
@@ -160,19 +157,76 @@ function PointsCard({
 }
 
 export default function PointsPage() {
-  const [programs, setPrograms] = useState(INITIAL_PROGRAMS);
+  const [programs, setPrograms] = useState<PointsProgram[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingProgram, setSavingProgram] = useState<string | null>(null);
 
-  const handleUpdateBalance = (id: string, balance: number) => {
-    setPrograms((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, balance, lastSynced: new Date().toLocaleDateString() }
-          : p
-      )
-    );
+  const fetchBalances = useCallback(async () => {
+    try {
+      const res = await fetch("/api/points");
+      const json = await res.json();
+      const balances = json.data ?? [];
+
+      // Merge DB balances with config for both programs
+      const merged = ["chase_ur", "amex_mr"].map((prog) => {
+        const config = PROGRAM_CONFIGS[prog];
+        const dbRow = balances.find((b: { program: string }) => b.program === prog);
+        return {
+          ...config,
+          balance: dbRow?.balance ?? 0,
+          lastSyncedAt: dbRow?.lastSyncedAt ?? null,
+        } as PointsProgram;
+      });
+
+      setPrograms(merged);
+    } catch {
+      // Fallback to empty balances
+      setPrograms(
+        ["chase_ur", "amex_mr"].map((prog) => ({
+          ...PROGRAM_CONFIGS[prog],
+          balance: 0,
+          lastSyncedAt: null,
+        })) as PointsProgram[]
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBalances();
+  }, [fetchBalances]);
+
+  const handleUpdateBalance = async (program: string, balance: number) => {
+    setSavingProgram(program);
+    try {
+      await fetch("/api/points", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ program, balance }),
+      });
+      // Optimistic update
+      setPrograms((prev) =>
+        prev.map((p) =>
+          p.program === program
+            ? { ...p, balance, lastSyncedAt: new Date().toISOString() }
+            : p
+        )
+      );
+    } finally {
+      setSavingProgram(null);
+    }
   };
 
   const totalPoints = programs.reduce((sum, p) => sum + p.balance, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-pj-gold" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10">
@@ -204,8 +258,12 @@ export default function PointsPage() {
       {/* Points cards */}
       <div className="grid gap-6 md:grid-cols-2">
         {programs.map((program, i) => (
-          <div key={program.id} className={`animate-fade-up stagger-${i + 2}`}>
-            <PointsCard program={program} onUpdateBalance={handleUpdateBalance} />
+          <div key={program.program} className={`animate-fade-up stagger-${i + 2}`}>
+            <PointsCard
+              program={program}
+              saving={savingProgram === program.program}
+              onUpdateBalance={handleUpdateBalance}
+            />
           </div>
         ))}
       </div>

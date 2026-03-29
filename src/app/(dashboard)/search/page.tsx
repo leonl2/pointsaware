@@ -1,5 +1,6 @@
 import { SearchForm } from "@/components/flights/search-form";
 import { SearchResults } from "@/components/flights/search-results";
+import { CalendarSection } from "@/components/flights/calendar-section";
 import { Suspense } from "react";
 
 export const metadata = { title: "Search Flights" };
@@ -38,7 +39,18 @@ async function SearchResultsWrapper({
 }) {
   const params = await searchParams;
   if (!params.origin) return null;
-  return <SearchResults params={params} />;
+  return (
+    <>
+      <SearchResults params={params} />
+      {params.destination && (
+        <CalendarSection
+          origin={params.origin}
+          destination={params.destination}
+          cabin={(params.cabins?.split(",")[0] as "business" | "first") ?? "business"}
+        />
+      )}
+    </>
+  );
 }
 
 function SearchResultsSkeleton() {

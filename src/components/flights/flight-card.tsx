@@ -1,8 +1,10 @@
 "use client";
 
 import { getAirline } from "@/lib/constants/airlines";
-import { Plane, Users, Clock } from "lucide-react";
+import { Plane, Users, Clock, ChevronDown, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import type { TransferOption } from "@/lib/types/flight";
 
 interface FlightDealSummary {
   id: string;
@@ -36,12 +38,20 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export function FlightCard({ deal }: { deal: FlightDealSummary }) {
+export function FlightCard({
+  deal,
+  transferOptions,
+}: {
+  deal: FlightDealSummary;
+  transferOptions?: TransferOption[];
+}) {
+  const [showTransfers, setShowTransfers] = useState(false);
   const airlineInfo = getAirline(deal.airline);
   const isFirst = deal.cabinClass === "first";
+  const hasTransfers = transferOptions && transferOptions.length > 0;
 
   return (
-    <div className="boarding-pass group cursor-pointer">
+    <div className="boarding-pass group">
       <div
         className={cn(
           "relative rounded-xl overflow-hidden transition-all duration-300",
@@ -86,7 +96,7 @@ export function FlightCard({ deal }: { deal: FlightDealSummary }) {
               </span>
             </div>
 
-            {/* Route — big IATA codes with plane between */}
+            {/* Route */}
             <div className="flex items-center gap-4 mb-4">
               <div>
                 <p className="text-3xl font-serif font-bold tracking-tight text-pj-cream">
@@ -122,9 +132,7 @@ export function FlightCard({ deal }: { deal: FlightDealSummary }) {
                 <span>{formatDate(deal.departureDate)}</span>
               </div>
               <span className="text-pj-slate">|</span>
-              <span>
-                {deal.isDirect ? "Nonstop" : "1 stop"}
-              </span>
+              <span>{deal.isDirect ? "Nonstop" : "1 stop"}</span>
               {deal.seatsRemaining !== null && deal.seatsRemaining <= 4 && (
                 <>
                   <span className="text-pj-slate">|</span>
@@ -156,12 +164,79 @@ export function FlightCard({ deal }: { deal: FlightDealSummary }) {
               <p className="text-[10px] text-pj-silver leading-tight">
                 via {deal.program}
               </p>
-              <p className="text-[10px] text-pj-gold-dim mt-0.5 font-medium">
-                {deal.transferFrom} {deal.transferRatio}
-              </p>
+              {deal.transferFrom && (
+                <p className="text-[10px] text-pj-gold-dim mt-0.5 font-medium">
+                  {deal.transferFrom} {deal.transferRatio}
+                </p>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Transfer options expandable section */}
+        {hasTransfers && (
+          <div className="border-t border-pj-slate/40">
+            <button
+              onClick={() => setShowTransfers(!showTransfers)}
+              className="w-full px-5 py-2.5 flex items-center justify-between text-xs text-pj-silver hover:text-pj-cream transition-colors"
+            >
+              <span className="font-medium">
+                {transferOptions.length} transfer option{transferOptions.length !== 1 ? "s" : ""}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform",
+                  showTransfers && "rotate-180"
+                )}
+              />
+            </button>
+            {showTransfers && (
+              <div className="px-5 pb-4 space-y-2">
+                {transferOptions.map((opt, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex items-center justify-between rounded-lg px-3 py-2 text-xs",
+                      opt.canAfford
+                        ? "bg-pj-emerald/5 border border-pj-emerald/20"
+                        : "bg-pj-slate/20 border border-pj-slate/30"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {opt.canAfford ? (
+                        <Check className="h-3 w-3 text-pj-emerald" />
+                      ) : (
+                        <X className="h-3 w-3 text-pj-silver/40" />
+                      )}
+                      <span className="text-pj-cream font-medium">
+                        {opt.sourceProgramName}
+                      </span>
+                      <span className="text-pj-silver">→</span>
+                      <span className="text-pj-silver">
+                        {opt.targetProgramName}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "font-mono font-bold",
+                          opt.canAfford ? "text-pj-emerald" : "text-pj-silver"
+                        )}
+                      >
+                        {formatPoints(opt.pointsNeeded)} pts
+                      </span>
+                      {opt.canAfford && (
+                        <span className="text-pj-silver/50">
+                          ({formatPoints(opt.remainingAfterTransfer)} left)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

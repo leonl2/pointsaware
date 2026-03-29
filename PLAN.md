@@ -98,12 +98,13 @@ pointsjet/
 - [x] Dashboard, alerts, deals, settings, notifications pages (UI)
 - [x] Points balance page with credit-card widgets + inline editing
 
-### Phase 2: Core Product (In Progress)
-- [ ] Transfer optimizer integration into search results UI
-- [ ] Points balance persistence (DB read/write)
-- [ ] Saved searches
-- [ ] Redis caching for search results
-- [ ] Route map (Mapbox) + availability calendar heatmap
+### Phase 2: Core Product -- COMPLETE
+- [x] Transfer optimizer integration into search results UI
+- [x] Points balance persistence (DB read/write via /api/points)
+- [x] Saved searches (CRUD via /api/searches, dashboard integration)
+- [x] Redis caching for search results (was already in place from Phase 1)
+- [x] Availability calendar heatmap (date-based pricing grid with color coding)
+- [ ] Route map (Mapbox) — deferred to Phase 5
 
 ### Phase 3: Alerts & Notifications
 - [ ] Inngest setup + price check cron

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchAwardFlights } from "@/lib/services/seats-aero";
+import { enrichFlightsWithTransfers } from "@/lib/services/transfer-optimizer";
 import type { CabinClass } from "@/lib/types/flight";
 import { getCached, setCache, flightSearchCacheKey } from "@/lib/cache";
+import { getOrCreateDbUser } from "@/lib/db/queries/users";
+import { getPointsBalances } from "@/lib/db/queries/points";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -48,14 +51,32 @@ export async function GET(request: NextRequest) {
       cabinClasses,
     });
 
+    // Enrich with transfer options if user is authenticated
+    let enrichedFlights;
+    try {
+      const user = await getOrCreateDbUser();
+      if (user) {
+        const balances = await getPointsBalances(user.id);
+        const userBalances = balances.map((b) => ({
+          program: b.program,
+          balance: b.balance,
+        }));
+        enrichedFlights = enrichFlightsWithTransfers(flights, userBalances);
+      }
+    } catch {
+      // Auth/DB failure is non-critical for search
+    }
+
+    const result = enrichedFlights ?? flights;
+
     // Cache results for 5 minutes
     try {
-      await setCache(cacheKey, flights, 300);
+      await setCache(cacheKey, result, 300);
     } catch {
       // Cache write failure is non-critical
     }
 
-    return NextResponse.json({ data: flights, cached: false });
+    return NextResponse.json({ data: result, cached: false });
   } catch (error) {
     console.error("Flight search error:", error);
     return NextResponse.json(
