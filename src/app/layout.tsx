@@ -39,6 +39,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
       appearance={{
         baseTheme: dark,
         variables: {
@@ -46,6 +48,60 @@ export default function RootLayout({
           colorBackground: "#0f1729",
           colorInputBackground: "#162036",
           colorInputText: "#e8dcc8",
+          colorText: "#e8dcc8",
+          colorTextSecondary: "#94a3b8",
+          colorNeutral: "#ffffff",
+          colorDanger: "#e8586d",
+          borderRadius: "0.625rem",
+        },
+        elements: {
+          // Card / popover containers
+          card: {
+            backgroundColor: "#0f1729",
+            border: "1px solid #1e2d4a",
+          },
+          // Sign-in / sign-up form elements
+          headerTitle: { color: "#e8dcc8" },
+          headerSubtitle: { color: "#94a3b8" },
+          socialButtonsBlockButtonText: { color: "#e8dcc8" },
+          dividerText: { color: "#94a3b8" },
+          dividerLine: { borderColor: "#1e2d4a" },
+          formFieldLabel: { color: "#c8d4e6" },
+          footerActionText: { color: "#94a3b8" },
+          footerActionLink: { color: "#d4a853" },
+          // UserButton popover
+          userButtonPopoverCard: {
+            backgroundColor: "#0f1729",
+            border: "1px solid #1e2d4a",
+          },
+          userButtonPopoverActionButton: { color: "#e8dcc8" },
+          userButtonPopoverActionButtonText: { color: "#e8dcc8" },
+          userButtonPopoverActionButtonIcon: { color: "#94a3b8" },
+          userButtonPopoverFooter: { color: "#94a3b8" },
+          userPreviewMainIdentifier: { color: "#e8dcc8" },
+          userPreviewSecondaryIdentifier: { color: "#94a3b8" },
+          // User profile modal
+          navbar: { backgroundColor: "#0a1020", borderColor: "#1e2d4a" },
+          navbarButton: { color: "#e8dcc8" },
+          navbarButtonIcon: { color: "#94a3b8" },
+          pageScrollBox: { backgroundColor: "#0f1729" },
+          profileSection: { borderColor: "#1e2d4a" },
+          profileSectionTitle: { color: "#e8dcc8", borderColor: "#1e2d4a" },
+          profileSectionTitleText: { color: "#e8dcc8" },
+          profileSectionContent: { color: "#c8d4e6" },
+          profileSectionPrimaryButton: { color: "#d4a853" },
+          accordionTriggerButton: { color: "#e8dcc8" },
+          accordionContent: { color: "#c8d4e6" },
+          // Modals / generic
+          modalCloseButton: { color: "#94a3b8" },
+          formButtonPrimary: {
+            backgroundColor: "#d4a853",
+            color: "#080e1e",
+          },
+          badge: { color: "#e8dcc8", backgroundColor: "#1e2d4a" },
+          menuButton: { color: "#e8dcc8" },
+          menuList: { backgroundColor: "#0f1729", borderColor: "#1e2d4a" },
+          menuItem: { color: "#e8dcc8" },
         },
       }}
     >
