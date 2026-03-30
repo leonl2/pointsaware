@@ -15,7 +15,7 @@ npx drizzle-kit generate  # Generate migration files
 vercel --prod        # Deploy to production
 ```
 
-No test framework is configured yet.
+npm run test         # Run tests (vitest)
 
 ## Deployment
 
@@ -52,11 +52,17 @@ Each group has its own layout. The dashboard layout provides sidebar + header sh
 ### Key Modules
 
 - **`lib/db/schema.ts`** — Drizzle ORM schema (8 tables: users, pointsBalances, savedSearches, alerts, flightDeals, priceHistory, notifications, transferPartners)
-- **`lib/db/queries/`** — Query helpers: `users.ts` (getOrCreateDbUser from Clerk), `points.ts` (upsert balances), `searches.ts` (saved search CRUD)
+- **`lib/db/queries/`** — Query helpers: `users.ts` (getOrCreateDbUser from Clerk), `points.ts` (atomic upsert balances), `searches.ts` (saved search CRUD), `alerts.ts` (alert CRUD + active alert queries), `notifications.ts` (notification CRUD + unread count), `price-history.ts` (price recording + trend detection + cleanup)
 - **`lib/services/seats-aero.ts`** — seats.aero API client for award flight availability (NOT cash fares)
 - **`lib/services/transfer-optimizer.ts`** — Core differentiator: finds cheapest points currency → airline program transfer path
 - **`lib/constants/transfer-partners.ts`** — Chase UR and Amex MR partner matrices with transfer ratios and times
 - **`lib/cache/index.ts`** — Upstash Redis helpers (`getCached`, `setCache`, `flightSearchCacheKey`)
+
+### Key Services
+
+- **`lib/services/alert-monitor.ts`** — Evaluates alerts against current deals; triggers notifications with 6-hour throttle
+- **`lib/services/notifications.ts`** — Unified notification dispatcher: routes to email (Resend), in-app, push, SMS channels
+- **`lib/services/email.ts`** — Resend email sender with branded HTML template (lazy-init, same pattern as DB client)
 
 ### API Routes
 
@@ -64,6 +70,12 @@ Each group has its own layout. The dashboard layout provides sidebar + header sh
 - `GET /api/flights/calendar` — Monthly availability heatmap data (lowest price per date)
 - `GET|PUT /api/points` — Read/update user's points balances
 - `GET|POST|DELETE /api/searches` — Saved searches CRUD
+- `GET|POST|PUT|DELETE /api/alerts` — Alert CRUD (create, list with active count, toggle, delete)
+- `GET|PUT|DELETE /api/notifications` — Notification list (paginated), mark read/all, delete
+- `GET /api/notifications/unread-count` — Unread count for header badge (polled every 30s)
+- `GET /api/cron/check-prices` — Cron: fetch latest award prices for active alerts, record to price_history
+- `GET /api/cron/send-alerts` — Cron: evaluate active alerts against latest deals, dispatch notifications
+- `GET /api/cron/cleanup` — Cron: purge old price history, expired deals, read notifications
 
 ### Auth
 
@@ -71,7 +83,7 @@ Clerk v7 with route protection in `src/proxy.ts` (NOT `middleware.ts` — Next.j
 
 ### DB Client
 
-`lib/db/index.ts` uses a Proxy for lazy initialization — the Neon connection is only created on first query, not at import time. This allows the build to succeed without `DATABASE_URL` set.
+`lib/db/index.ts` uses a Proxy for lazy initialization — the Neon connection is only created on first query, not at import time. This allows the build to succeed without `DATABASE_URL` set. The Resend email client in `lib/services/email.ts` uses the same lazy-init pattern.
 
 ## Critical Gotchas
 
@@ -79,6 +91,9 @@ Clerk v7 with route protection in `src/proxy.ts` (NOT `middleware.ts` — Next.j
 - **shadcn v4 uses base-ui**, NOT Radix. The `asChild` prop does not exist. Apply classes directly to trigger/slot components.
 - **Clerk v7 API differs** from older versions. `afterSignOutUrl` does not exist on `UserButton`. Check Clerk v7 docs before using Clerk components.
 - **Tailwind v4** — config is in CSS (`globals.css`), not `tailwind.config.ts`. PostCSS plugin is `@tailwindcss/postcss`.
+- **base-ui Select `onValueChange`** passes `string | null`, not `string`. Always guard: `onValueChange={(v) => v && setter(v)}`.
+- **Lazy-init pattern for external clients** (DB, Resend) — never instantiate at module scope with `process.env`. Use lazy getter so builds succeed without env vars and tests can mock modules.
+- **Cron routes use `CRON_SECRET`** header auth, NOT Clerk. They are intentionally excluded from the Clerk route matcher in `proxy.ts`.
 
 ## Design System
 
