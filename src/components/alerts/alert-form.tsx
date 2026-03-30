@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface SavedSearch {
   id: string;
@@ -106,17 +113,18 @@ export function AlertForm({ searches, onCreated, onClose }: AlertFormProps) {
         {/* Search selection */}
         <div>
           <label className="text-xs text-pj-silver mb-1.5 block">Saved Search</label>
-          <select
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            className="w-full rounded-lg border border-pj-slate bg-pj-midnight px-3 py-2 text-sm text-pj-cream focus:border-pj-gold focus:outline-none"
-          >
-            {searches.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.origin} → {s.destination ?? "Anywhere"} · {s.cabinClasses.join(", ")}
-              </option>
-            ))}
-          </select>
+          <Select value={searchId} onValueChange={(v) => v && setSearchId(v)}>
+            <SelectTrigger className="w-full rounded-lg border border-pj-slate bg-pj-midnight px-3 py-2 text-sm text-pj-cream">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-pj-navy border border-pj-slate">
+              {searches.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="text-pj-cream text-sm">
+                  {s.origin} → {s.destination ?? "Anywhere"} · {s.cabinClasses.join(", ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Alert type */}

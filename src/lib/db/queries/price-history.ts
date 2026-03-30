@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { priceHistory, flightDeals } from "@/lib/db/schema";
-import { eq, desc, lt, and, gte, sql } from "drizzle-orm";
+import { eq, desc, lt, and, gte } from "drizzle-orm";
 
 export function buildRouteKey(
   origin: string,
