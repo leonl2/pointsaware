@@ -70,11 +70,12 @@ function cabinToSeatsAeroField(cabin: CabinClass): "Y" | "W" | "J" | "F" {
   }
 }
 
-function parseMileageCost(cost: string): number {
+export function parseMileageCost(cost: string): number {
   if (!cost || cost === "" || cost === "0") return 0;
   // seats.aero returns costs as strings, sometimes comma-separated for multiple options
   const values = cost.split(",").map((v) => parseInt(v.trim(), 10));
-  return Math.min(...values.filter((v) => !isNaN(v) && v > 0));
+  const validValues = values.filter((v) => !isNaN(v) && v > 0);
+  return validValues.length > 0 ? Math.min(...validValues) : 0;
 }
 
 function parseAvailabilityToFlights(
