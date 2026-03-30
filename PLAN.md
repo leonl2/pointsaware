@@ -50,18 +50,16 @@ pointsjet/
 │   │   ├── (marketing)/      # Landing page, pricing
 │   │   └── api/              # flights/, alerts/, points/, notifications/, cron/, webhooks/
 │   ├── lib/
-│   │   ├── db/               # schema.ts, migrations/, queries/
-│   │   ├── services/         # seats-aero.ts, transfer-optimizer.ts
+│   │   ├── db/               # schema.ts, migrations/, queries/ (users, points, searches, alerts, notifications, price-history)
+│   │   ├── services/         # seats-aero.ts, transfer-optimizer.ts, alert-monitor.ts, notifications.ts, email.ts
 │   │   ├── constants/        # airlines.ts, transfer-partners.ts
 │   │   ├── cache/            # Upstash Redis client
-│   │   ├── queue/            # Inngest client + functions
-│   │   └── types/            # flight.ts
+│   │   └── types/            # flight.ts, api.ts
 │   ├── components/
-│   │   ├── flights/          # search-form, flight-card
-│   │   ├── points/           # balance-card, transfer-optimizer
+│   │   ├── flights/          # search-form, flight-card, availability-calendar
 │   │   ├── alerts/           # alert-form, alert-list
-│   │   ├── dashboard/        # deals-feed, price-chart, stats-overview
-│   │   ├── layout/           # sidebar, header
+│   │   ├── dashboard/        # deals-feed
+│   │   ├── layout/           # sidebar, header (with live notification bell)
 │   │   └── ui/               # shadcn components
 │   └── hooks/
 ├── public/airlines/          # Airline logo SVGs
@@ -69,11 +67,11 @@ pointsjet/
 └── vercel.json               # Cron config
 ```
 
-## Background Job Architecture (Inngest)
-- **Every 15 min:** Fetch award availability from seats.aero for active searches → upsert `flight_deals` + `price_history`
-- **On deals.updated event:** Check alerts against new data → fan-out notifications (email/SMS/push/in-app)
-- **Daily 9am:** Digest email with top deals per user
-- **Daily 3am:** Cleanup expired `flight_deals` rows
+## Background Job Architecture (Vercel Cron)
+Currently using Vercel cron (defined in `vercel.json`), not Inngest. Inngest is installed but unused — may add later if fan-out or retries become needed.
+- **Daily 9am UTC:** `/api/cron/check-prices` — Fetch latest award prices for all active alerts, record to `price_history`
+- **Daily 10am UTC:** `/api/cron/send-alerts` — Evaluate active alerts against latest deals, dispatch notifications (email/in-app)
+- **Daily 3am UTC:** `/api/cron/cleanup` — Purge old price_history (>90 days), expired flight_deals (>24h), read notifications (>30 days)
 
 ## Subscription Tiers
 | Feature | Free | Pro ($9/mo) | Premium ($19/mo) |
@@ -106,20 +104,40 @@ pointsjet/
 - [x] Availability calendar heatmap (date-based pricing grid with color coding)
 - [ ] Route map (Mapbox) — deferred to Phase 5
 
-### Phase 3: Alerts & Notifications
-- [ ] Inngest setup + price check cron
-- [ ] Alert creation UI wired to DB
-- [ ] Email notifications (Resend)
-- [ ] In-app notifications + web push
-- [ ] Price history tracking + chart component
+### Phase 3: Alerts & Notifications — IN PROGRESS
+- [x] DB query layer: alerts, notifications, price-history CRUD
+- [x] Alert monitor service with 6-hour throttle
+- [x] Notification dispatcher (email via Resend, in-app, push/SMS channel stubs)
+- [x] Cron route handlers: check-prices, send-alerts, cleanup (Vercel cron, no Inngest)
+- [x] API routes: /api/alerts CRUD, /api/notifications CRUD, /api/notifications/unread-count
+- [x] Alert creation UI wired to DB (form + list with toggle/delete)
+- [x] Notifications page wired to real data (read/unread, mark all read, delete)
+- [x] Header bell with live unread count (polls every 30s)
+- [x] Dashboard shows real active alert count
+- [x] Points balance upsert fixed (atomic onConflictDoUpdate)
+- [x] seats.aero parseMileageCost Infinity bug fixed
+- [x] seats.aero pagination implemented (cursor-based, max 10 pages)
+- [ ] Price history chart component (recharts) — deferred to Phase 4
+- [ ] Web push registration + service worker — deferred to Phase 4
+- [ ] Inngest — deferred; using Vercel cron-only for now
 
-### Phase 4: Intelligence & Polish
-- [ ] "Best time to book" from price history trends
-- [ ] Daily digest emails
-- [ ] Stripe billing (tier gating)
-- [ ] SMS alerts (Twilio, premium tier)
-- [ ] Mobile responsive pass, loading/empty states, error handling
-- [ ] Rate limiting via Redis
+### Phase 4: Intelligence & Polish — IN PROGRESS
+- [x] Tier limits utility + rate limiting (Redis sliding window)
+- [x] Tier enforcement in API routes (search rate limit, alert count, program count, channel validation)
+- [x] Stripe billing: checkout, portal, webhook, pricing page integration
+- [x] Web push notifications: service worker, VAPID, subscribe/unsubscribe, push prompt component
+- [x] SMS notifications via Twilio (premium tier only)
+- [x] Notification dispatcher wired to real push + SMS (replaced stubs)
+- [x] Price history chart component (recharts AreaChart with trend insight)
+- [x] "Best time to book" insight from price history trends
+- [x] Price history API endpoint with tier-based day limits
+- [x] Daily digest email cron (morning email with top deals per saved search)
+- [x] Deals API + deals feed wired to real data (replaced hardcoded samples)
+- [x] Settings page fully functional (home airport, notification prefs, phone, subscription tier, Stripe portal)
+- [x] Mobile marketing nav (Sheet-based hamburger menu)
+- [x] Error boundary for dashboard routes
+- [x] Toast notifications (sonner) for user actions (alerts, searches, settings)
+- [x] User preferences API (GET/PUT /api/user/preferences)
 
 ### Phase 5: Growth
 - [ ] Personalized "deals from your airport" feed

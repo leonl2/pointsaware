@@ -42,3 +42,60 @@ export async function getDbUserByClerkId(clerkId: string) {
     .limit(1);
   return user ?? null;
 }
+
+export async function getUserById(userId: string) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return user ?? null;
+}
+
+export async function updateUserSubscription(
+  userId: string,
+  data: {
+    subscriptionTier: string;
+    stripeCustomerId: string;
+    stripeSubscriptionId: string | null;
+  }
+) {
+  const [updated] = await db
+    .update(users)
+    .set({
+      subscriptionTier: data.subscriptionTier,
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+  return updated ?? null;
+}
+
+export async function updateUserPreferences(
+  userId: string,
+  data: {
+    homeAirport?: string | null;
+    notificationPrefs?: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+      inApp: boolean;
+      dailyDigest: boolean;
+    };
+    phone?: string | null;
+  }
+) {
+  const setFields: Record<string, unknown> = { updatedAt: new Date() };
+  if (data.homeAirport !== undefined) setFields.homeAirport = data.homeAirport;
+  if (data.notificationPrefs !== undefined) setFields.notificationPrefs = data.notificationPrefs;
+  if (data.phone !== undefined) setFields.phone = data.phone;
+
+  const [updated] = await db
+    .update(users)
+    .set(setFields)
+    .where(eq(users.id, userId))
+    .returning();
+  return updated ?? null;
+}

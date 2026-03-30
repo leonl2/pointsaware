@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { DealsFeed } from "@/components/dashboard/deals-feed";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface SavedSearch {
@@ -42,13 +43,17 @@ export default function DashboardPage() {
   const [balances, setBalances] = useState<PointsBalance[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [activeAlertCount, setActiveAlertCount] = useState(0);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/searches").then((r) => r.json()).catch(() => ({ data: [] })),
       fetch("/api/points").then((r) => r.json()).catch(() => ({ data: [] })),
-    ]).then(([searchesRes, pointsRes]) => {
+      fetch("/api/alerts").then((r) => r.json()).catch(() => ({ data: [], activeCount: 0 })),
+    ]).then(([searchesRes, pointsRes, alertsRes]) => {
       setSearches(searchesRes.data ?? []);
       setBalances(pointsRes.data ?? []);
+      setActiveAlertCount(alertsRes.activeCount ?? 0);
       setLoading(false);
     });
   }, []);
@@ -58,10 +63,11 @@ export default function DashboardPage() {
   const handleDeleteSearch = async (id: string) => {
     await fetch(`/api/searches?id=${id}`, { method: "DELETE" });
     setSearches((prev) => prev.filter((s) => s.id !== id));
+    toast.success("Search removed");
   };
 
   const stats = [
-    { label: "Active Alerts", value: "0", sub: "Set up alerts to get notified", icon: Bell, accent: "text-pj-gold" },
+    { label: "Active Alerts", value: activeAlertCount > 0 ? activeAlertCount.toString() : "0", sub: activeAlertCount > 0 ? `${activeAlertCount} active alert${activeAlertCount !== 1 ? "s" : ""}` : "Set up alerts to get notified", icon: Bell, accent: "text-pj-gold" },
     {
       label: "Points Available",
       value: totalPoints > 0 ? totalPoints.toLocaleString() : "--",
