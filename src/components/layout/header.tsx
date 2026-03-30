@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
@@ -25,6 +26,20 @@ const navItems = [
 
 export function Header() {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCount = () => {
+      fetch("/api/notifications/unread-count")
+        .then((r) => r.json())
+        .then((data) => setUnreadCount(data.count ?? 0))
+        .catch(() => {});
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b border-pj-slate/50 bg-pj-navy/90 backdrop-blur-xl px-4 lg:px-6">
@@ -78,9 +93,11 @@ export function Header() {
       <Link href="/notifications">
         <div className="relative inline-flex items-center justify-center h-9 w-9 rounded-lg text-pj-silver hover:text-pj-cream hover:bg-pj-slate/50 transition-colors cursor-pointer">
           <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-pj-gold text-[10px] font-bold text-pj-midnight flex items-center justify-center">
-            3
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-pj-gold text-[10px] font-bold text-pj-midnight flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
         </div>
       </Link>
       <UserButton />
