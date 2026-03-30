@@ -15,7 +15,7 @@ npx drizzle-kit generate  # Generate migration files
 vercel --prod        # Deploy to production
 ```
 
-No test framework is configured yet.
+npm run test         # Run tests (vitest)
 
 ## Deployment
 
@@ -52,7 +52,7 @@ Each group has its own layout. The dashboard layout provides sidebar + header sh
 ### Key Modules
 
 - **`lib/db/schema.ts`** — Drizzle ORM schema (8 tables: users, pointsBalances, savedSearches, alerts, flightDeals, priceHistory, notifications, transferPartners)
-- **`lib/db/queries/`** — Query helpers: `users.ts` (getOrCreateDbUser from Clerk), `points.ts` (upsert balances), `searches.ts` (saved search CRUD)
+- **`lib/db/queries/`** — Query helpers: `users.ts` (getOrCreateDbUser from Clerk), `points.ts` (atomic upsert via `onConflictDoUpdate`), `searches.ts` (saved search CRUD)
 - **`lib/services/seats-aero.ts`** — seats.aero API client for award flight availability (NOT cash fares)
 - **`lib/services/transfer-optimizer.ts`** — Core differentiator: finds cheapest points currency → airline program transfer path
 - **`lib/constants/transfer-partners.ts`** — Chase UR and Amex MR partner matrices with transfer ratios and times
