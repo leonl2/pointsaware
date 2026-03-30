@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Bell, Plus, Mail, MessageSquare, Smartphone, Inbox, Loader2 } from "lucide-react";
 import { AlertForm } from "@/components/alerts/alert-form";
 import { AlertList } from "@/components/alerts/alert-list";
+import { toast } from "sonner";
 
 const channels = [
   { icon: Mail, label: "Email", desc: "Receive deal alerts in your inbox", color: "text-pj-gold", bg: "bg-pj-gold/10", enabled: true, locked: false },
@@ -62,11 +63,13 @@ export default function AlertsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, isActive }),
     });
+    toast.success(isActive ? "Alert enabled" : "Alert paused");
   };
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/alerts?id=${id}`, { method: "DELETE" });
     setAlerts((prev) => prev.filter((a) => a.id !== id));
+    toast.success("Alert deleted");
   };
 
   return (

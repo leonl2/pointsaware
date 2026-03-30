@@ -3,6 +3,8 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { createNotification } from "@/lib/db/queries/notifications";
 import { sendAlertEmail } from "./email";
+import { sendPushNotification } from "./web-push";
+import { sendSms } from "./sms";
 
 interface AlertInfo {
   id: string;
@@ -72,15 +74,38 @@ export async function sendNotification(
           break;
         }
 
-        case "push":
-          // Web push will be implemented with service worker registration
-          results.push({ channel, success: false, error: "Not yet implemented" });
+        case "push": {
+          const [pushUser] = await db
+            .select({ pushSubscription: users.pushSubscription })
+            .from(users)
+            .where(eq(users.id, alert.userId))
+            .limit(1);
+          if (pushUser?.pushSubscription) {
+            await sendPushNotification(
+              pushUser.pushSubscription as Parameters<typeof sendPushNotification>[0],
+              { title, body, url: link }
+            );
+            results.push({ channel, success: true });
+          } else {
+            results.push({ channel, success: false, error: "No push subscription" });
+          }
           break;
+        }
 
-        case "sms":
-          // SMS via Twilio — premium tier only, Phase 4
-          results.push({ channel, success: false, error: "Not yet implemented" });
+        case "sms": {
+          const [smsUser] = await db
+            .select({ phone: users.phone, subscriptionTier: users.subscriptionTier })
+            .from(users)
+            .where(eq(users.id, alert.userId))
+            .limit(1);
+          if (smsUser?.phone && smsUser.subscriptionTier === "premium") {
+            await sendSms(smsUser.phone, `${title}: ${body}`);
+            results.push({ channel, success: true });
+          } else {
+            results.push({ channel, success: false, error: smsUser?.phone ? "SMS requires premium" : "No phone number" });
+          }
           break;
+        }
       }
     } catch (err) {
       results.push({

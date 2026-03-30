@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateDbUser } from "@/lib/db/queries/users";
 import { getPointsBalances, upsertPointsBalance } from "@/lib/db/queries/points";
+import { getTierLimits, isUnlimited } from "@/lib/services/tier-limits";
 
 export async function GET() {
   const user = await getOrCreateDbUser();
@@ -33,6 +34,19 @@ export async function PUT(request: NextRequest) {
       { error: "program must be chase_ur or amex_mr" },
       { status: 400 }
     );
+  }
+
+  // Tier enforcement: check program count limit
+  const limits = getTierLimits(user.subscriptionTier);
+  if (!isUnlimited(limits.maxPrograms)) {
+    const existing = await getPointsBalances(user.id);
+    const existingPrograms = existing.map((b) => b.program);
+    if (!existingPrograms.includes(program) && existingPrograms.length >= limits.maxPrograms) {
+      return NextResponse.json(
+        { error: `Program limit reached (${limits.maxPrograms}). Upgrade to add more programs.` },
+        { status: 403 }
+      );
+    }
   }
 
   const updated = await upsertPointsBalance(user.id, program, balance);

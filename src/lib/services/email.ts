@@ -59,3 +59,61 @@ export async function sendAlertEmail(
     `,
   });
 }
+
+export async function sendDigestEmail(
+  to: string,
+  deals: Array<{
+    origin: string;
+    destination: string;
+    airline: string;
+    cabinClass: string;
+    pointsPrice: number;
+  }>
+) {
+  if (deals.length === 0) return;
+
+  const dealRows = deals
+    .slice(0, 5)
+    .map(
+      (d) =>
+        `<tr>
+          <td style="padding: 8px; color: #e8e0d0;">${d.origin} → ${d.destination}</td>
+          <td style="padding: 8px; color: #e8e0d0;">${d.airline}</td>
+          <td style="padding: 8px; color: #e8e0d0;">${d.cabinClass}</td>
+          <td style="padding: 8px; color: #d4a853; font-weight: bold;">${d.pointsPrice.toLocaleString()} pts</td>
+        </tr>`
+    )
+    .join("");
+
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Your Daily Flight Deals — ${deals.length} opportunities`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #d4a853;">✈️ Your Daily Digest</h2>
+        <p style="color: #8899aa;">Today's best award flight deals based on your saved searches:</p>
+        <table style="width: 100%; border-collapse: collapse; background: #1a2332; border-radius: 12px; overflow: hidden;">
+          <thead>
+            <tr style="border-bottom: 1px solid #2d3748;">
+              <th style="padding: 10px 8px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase;">Route</th>
+              <th style="padding: 10px 8px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase;">Airline</th>
+              <th style="padding: 10px 8px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase;">Cabin</th>
+              <th style="padding: 10px 8px; text-align: left; color: #8899aa; font-size: 11px; text-transform: uppercase;">Price</th>
+            </tr>
+          </thead>
+          <tbody>${dealRows}</tbody>
+        </table>
+        <p style="margin-top: 20px;">
+          <a href="https://pointsaware.vercel.app/deals"
+             style="background: #d4a853; color: #0f1729; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            View All Deals
+          </a>
+        </p>
+        <p style="color: #8899aa; font-size: 12px; margin-top: 30px;">
+          You received this because you enabled daily digest emails on PointsAware.
+        </p>
+      </div>
+    `,
+  });
+}

@@ -5,6 +5,8 @@ import type { CabinClass } from "@/lib/types/flight";
 import { getCached, setCache, flightSearchCacheKey } from "@/lib/cache";
 import { getOrCreateDbUser } from "@/lib/db/queries/users";
 import { getPointsBalances } from "@/lib/db/queries/points";
+import { getTierLimits } from "@/lib/services/tier-limits";
+import { checkRateLimit } from "@/lib/services/rate-limiter";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -23,6 +25,31 @@ export async function GET(request: NextRequest) {
   }
 
   const cabinClasses = cabins?.length ? cabins : ["business", "first"] as CabinClass[];
+
+  // Rate limit for authenticated users
+  try {
+    const user = await getOrCreateDbUser();
+    if (user) {
+      const limits = getTierLimits(user.subscriptionTier);
+      const rateLimit = await checkRateLimit(
+        user.id,
+        "search",
+        limits.searchesPerDay,
+        86400
+      );
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          { error: "Daily search limit reached. Upgrade for unlimited searches." },
+          {
+            status: 429,
+            headers: { "X-RateLimit-Remaining": "0" },
+          }
+        );
+      }
+    }
+  } catch {
+    // Rate limit check failure is non-critical
+  }
 
   // Check cache
   const cacheKey = flightSearchCacheKey({

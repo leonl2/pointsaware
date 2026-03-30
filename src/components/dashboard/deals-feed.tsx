@@ -1,73 +1,45 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { FlightCard } from "@/components/flights/flight-card";
-import { Plane } from "lucide-react";
+import { Plane, Loader2 } from "lucide-react";
+import { getAirline } from "@/lib/constants/airlines";
 
-const SAMPLE_DEALS = [
-  {
-    id: "1",
-    origin: "SFO",
-    destination: "NRT",
-    airline: "NH",
-    airlineName: "ANA",
-    cabinClass: "business" as const,
-    departureDate: "2026-06-15",
-    pointsPrice: 55000,
-    program: "ANA Mileage Club",
-    transferFrom: "Amex MR",
-    transferRatio: "1:1",
-    seatsRemaining: 2,
-    isDirect: true,
-  },
-  {
-    id: "2",
-    origin: "JFK",
-    destination: "LHR",
-    airline: "BA",
-    airlineName: "British Airways",
-    cabinClass: "business" as const,
-    departureDate: "2026-05-20",
-    pointsPrice: 60000,
-    program: "British Airways Avios",
-    transferFrom: "Chase UR",
-    transferRatio: "1:1",
-    seatsRemaining: 4,
-    isDirect: true,
-  },
-  {
-    id: "3",
-    origin: "LAX",
-    destination: "SIN",
-    airline: "SQ",
-    airlineName: "Singapore Airlines",
-    cabinClass: "first" as const,
-    departureDate: "2026-07-01",
-    pointsPrice: 92500,
-    program: "Singapore KrisFlyer",
-    transferFrom: "Chase UR",
-    transferRatio: "1:1",
-    seatsRemaining: 1,
-    isDirect: false,
-  },
-  {
-    id: "4",
-    origin: "ORD",
-    destination: "CDG",
-    airline: "AF",
-    airlineName: "Air France",
-    cabinClass: "business" as const,
-    departureDate: "2026-05-10",
-    pointsPrice: 55000,
-    program: "Flying Blue",
-    transferFrom: "Amex MR",
-    transferRatio: "1:1",
-    seatsRemaining: 3,
-    isDirect: true,
-  },
-];
+interface Deal {
+  id: string;
+  origin: string;
+  destination: string;
+  airline: string;
+  cabinClass: string;
+  pointsPrice: number;
+  program: string;
+  seatsRemaining: number | null;
+  isDirect: boolean;
+  departureAt: string;
+  fetchedAt: string;
+}
 
 export function DealsFeed() {
-  if (SAMPLE_DEALS.length === 0) {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/deals")
+      .then((r) => r.json())
+      .then((data) => setDeals(data.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-pj-silver" />
+      </div>
+    );
+  }
+
+  if (deals.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-pj-slate p-16 text-center">
         <Plane className="h-10 w-10 text-pj-silver/30 mx-auto mb-4" />
@@ -83,9 +55,25 @@ export function DealsFeed() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {SAMPLE_DEALS.map((deal, i) => (
-        <div key={deal.id} className={`animate-fade-up stagger-${i + 1}`}>
-          <FlightCard deal={deal} />
+      {deals.map((deal, i) => (
+        <div key={deal.id} className={`animate-fade-up stagger-${Math.min(i + 1, 6)}`}>
+          <FlightCard
+            deal={{
+              id: deal.id,
+              origin: deal.origin,
+              destination: deal.destination,
+              airline: deal.airline,
+              airlineName: getAirline(deal.airline).name,
+              cabinClass: deal.cabinClass as "business" | "first" | "economy" | "premium_economy",
+              departureDate: deal.departureAt,
+              pointsPrice: deal.pointsPrice,
+              program: deal.program,
+              transferFrom: "",
+              transferRatio: "",
+              seatsRemaining: deal.seatsRemaining ?? 0,
+              isDirect: deal.isDirect,
+            }}
+          />
         </div>
       ))}
     </div>

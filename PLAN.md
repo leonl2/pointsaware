@@ -121,13 +121,23 @@ Currently using Vercel cron (defined in `vercel.json`), not Inngest. Inngest is 
 - [ ] Web push registration + service worker — deferred to Phase 4
 - [ ] Inngest — deferred; using Vercel cron-only for now
 
-### Phase 4: Intelligence & Polish
-- [ ] "Best time to book" from price history trends
-- [ ] Daily digest emails
-- [ ] Stripe billing (tier gating)
-- [ ] SMS alerts (Twilio, premium tier)
-- [ ] Mobile responsive pass, loading/empty states, error handling
-- [ ] Rate limiting via Redis
+### Phase 4: Intelligence & Polish — IN PROGRESS
+- [x] Tier limits utility + rate limiting (Redis sliding window)
+- [x] Tier enforcement in API routes (search rate limit, alert count, program count, channel validation)
+- [x] Stripe billing: checkout, portal, webhook, pricing page integration
+- [x] Web push notifications: service worker, VAPID, subscribe/unsubscribe, push prompt component
+- [x] SMS notifications via Twilio (premium tier only)
+- [x] Notification dispatcher wired to real push + SMS (replaced stubs)
+- [x] Price history chart component (recharts AreaChart with trend insight)
+- [x] "Best time to book" insight from price history trends
+- [x] Price history API endpoint with tier-based day limits
+- [x] Daily digest email cron (morning email with top deals per saved search)
+- [x] Deals API + deals feed wired to real data (replaced hardcoded samples)
+- [x] Settings page fully functional (home airport, notification prefs, phone, subscription tier, Stripe portal)
+- [x] Mobile marketing nav (Sheet-based hamburger menu)
+- [x] Error boundary for dashboard routes
+- [x] Toast notifications (sonner) for user actions (alerts, searches, settings)
+- [x] User preferences API (GET/PUT /api/user/preferences)
 
 ### Phase 5: Growth
 - [ ] Personalized "deals from your airport" feed

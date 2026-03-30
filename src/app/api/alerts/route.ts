@@ -7,6 +7,7 @@ import {
   updateAlert,
   deleteAlert,
 } from "@/lib/db/queries/alerts";
+import { getTierLimits, canUseChannel, isUnlimited } from "@/lib/services/tier-limits";
 
 export async function GET() {
   const user = await getOrCreateDbUser();
@@ -57,6 +58,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: `channels must be one of: ${validChannels.join(", ")}` },
       { status: 400 }
+    );
+  }
+
+  // Tier enforcement: check alert count limit
+  const limits = getTierLimits(user.subscriptionTier);
+  if (!isUnlimited(limits.maxAlerts)) {
+    const currentCount = await getActiveAlertCount(user.id);
+    if (currentCount >= limits.maxAlerts) {
+      return NextResponse.json(
+        { error: `Alert limit reached (${limits.maxAlerts}). Upgrade for more alerts.` },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Tier enforcement: validate channels
+  const blockedChannels = channels.filter(
+    (c: string) => !canUseChannel(user.subscriptionTier, c)
+  );
+  if (blockedChannels.length > 0) {
+    return NextResponse.json(
+      { error: `Your plan does not include: ${blockedChannels.join(", ")}. Upgrade to enable.` },
+      { status: 403 }
     );
   }
 

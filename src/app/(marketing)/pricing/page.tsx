@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
+import { CheckoutButton } from "@/components/billing/checkout-button";
 
 export const metadata = { title: "Pricing" };
 
@@ -18,6 +19,7 @@ const plans = [
     ],
     cta: "Get Started",
     href: "/signup",
+    priceId: null,
     highlight: false,
   },
   {
@@ -36,6 +38,7 @@ const plans = [
     ],
     cta: "Start Free Trial",
     href: "/signup",
+    priceId: process.env.STRIPE_PRO_PRICE_ID ?? null,
     highlight: true,
   },
   {
@@ -55,6 +58,7 @@ const plans = [
     ],
     cta: "Start Free Trial",
     href: "/signup",
+    priceId: process.env.STRIPE_PREMIUM_PRICE_ID ?? null,
     highlight: false,
   },
 ];
@@ -108,16 +112,20 @@ export default function PricingPage() {
                 </div>
                 <p className="text-sm text-pj-silver mt-3">{plan.description}</p>
 
-                <Link
-                  href={plan.href}
-                  className={`mt-6 block w-full py-3 rounded-lg text-sm font-semibold transition-all ${
-                    plan.highlight
-                      ? "bg-gradient-to-r from-pj-gold to-pj-gold-light text-pj-midnight hover:from-pj-gold-light hover:to-pj-amber glow-gold-sm"
-                      : "border border-pj-slate text-pj-cream hover:border-pj-steel hover:bg-pj-slate/30"
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
+                {plan.priceId ? (
+                  <CheckoutButton
+                    priceId={plan.priceId}
+                    label={plan.cta}
+                    highlight={plan.highlight}
+                  />
+                ) : (
+                  <Link
+                    href={plan.href}
+                    className="mt-6 block w-full py-3 rounded-lg text-sm font-semibold transition-all border border-pj-slate text-pj-cream hover:border-pj-steel hover:bg-pj-slate/30 text-center"
+                  >
+                    {plan.cta}
+                  </Link>
+                )}
 
                 <ul className="mt-8 space-y-3 text-left">
                   {plan.features.map((feature) => (

@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { DealsFeed } from "@/components/dashboard/deals-feed";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface SavedSearch {
@@ -62,6 +63,7 @@ export default function DashboardPage() {
   const handleDeleteSearch = async (id: string) => {
     await fetch(`/api/searches?id=${id}`, { method: "DELETE" });
     setSearches((prev) => prev.filter((s) => s.id !== id));
+    toast.success("Search removed");
   };
 
   const stats = [
