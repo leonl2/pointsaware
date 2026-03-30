@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { pointsBalances } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export async function getPointsBalances(userId: string) {
   return db
@@ -14,31 +14,7 @@ export async function upsertPointsBalance(
   program: string,
   balance: number
 ) {
-  const existing = await db
-    .select()
-    .from(pointsBalances)
-    .where(
-      and(
-        eq(pointsBalances.userId, userId),
-        eq(pointsBalances.program, program)
-      )
-    )
-    .limit(1);
-
-  if (existing.length > 0) {
-    const [updated] = await db
-      .update(pointsBalances)
-      .set({
-        balance,
-        lastSyncedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(pointsBalances.id, existing[0].id))
-      .returning();
-    return updated;
-  }
-
-  const [created] = await db
+  const [result] = await db
     .insert(pointsBalances)
     .values({
       userId,
@@ -47,6 +23,14 @@ export async function upsertPointsBalance(
       lastSyncedAt: new Date(),
       syncMethod: "manual",
     })
+    .onConflictDoUpdate({
+      target: [pointsBalances.userId, pointsBalances.program],
+      set: {
+        balance,
+        lastSyncedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
     .returning();
-  return created;
+  return result;
 }
