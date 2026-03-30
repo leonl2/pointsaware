@@ -2,7 +2,7 @@ import type { CabinClass } from "@/lib/types/flight";
 
 const BASE_URL = "https://seats.aero/partnerapi";
 
-interface SeatsAeroAvailability {
+export interface SeatsAeroAvailability {
   ID: string;
   RouteKey: string;
   Route: string;
@@ -144,6 +144,8 @@ async function fetchFromSeatsAero(
   return response;
 }
 
+const MAX_PAGES = 10;
+
 export async function searchAwardFlights(params: {
   origin: string;
   destination?: string;
@@ -166,14 +168,26 @@ export async function searchAwardFlights(params: {
     queryParams.source = params.source;
   }
 
-  const response = await fetchFromSeatsAero("/search", queryParams);
-  const data: SeatsAeroSearchResponse = await response.json();
-
   const flights: ParsedAwardFlight[] = [];
-  for (const avail of data.data) {
-    flights.push(
-      ...parseAvailabilityToFlights(avail, params.cabinClasses)
-    );
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const pageParams = { ...queryParams };
+    if (cursor) {
+      pageParams.cursor = cursor;
+    }
+
+    const response = await fetchFromSeatsAero("/search", pageParams);
+    const data: SeatsAeroSearchResponse = await response.json();
+
+    for (const avail of data.data) {
+      flights.push(
+        ...parseAvailabilityToFlights(avail, params.cabinClasses)
+      );
+    }
+
+    if (!data.hasMore || !data.cursor) break;
+    cursor = data.cursor;
   }
 
   // Sort by points price ascending
@@ -194,7 +208,22 @@ export async function getAvailabilityForRoute(params: {
     end_date: params.date,
   };
 
-  const response = await fetchFromSeatsAero("/search", queryParams);
-  const data: SeatsAeroSearchResponse = await response.json();
-  return data.data;
+  const results: SeatsAeroAvailability[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const pageParams = { ...queryParams };
+    if (cursor) {
+      pageParams.cursor = cursor;
+    }
+
+    const response = await fetchFromSeatsAero("/search", pageParams);
+    const data: SeatsAeroSearchResponse = await response.json();
+    results.push(...data.data);
+
+    if (!data.hasMore || !data.cursor) break;
+    cursor = data.cursor;
+  }
+
+  return results;
 }
